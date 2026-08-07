@@ -171,7 +171,8 @@ body {{ font-family: "PingFang SC","Microsoft YaHei",-apple-system,sans-serif;
 .q-stem code, .opt-text code {{ background: #f1f5f9; padding: 1px 5px;
        border-radius: 4px; font-family: "JetBrains Mono",Consolas,monospace;
        font-size: .92em; color: #0f172a; }}
-.q-stem svg {{ max-width: 100%; height: auto; display: block; margin: 8px auto; }}
+.q-stem svg {{ max-width: 100%; max-height: 540px; height: auto; display: block;
+       margin: 8px auto; }}
 .q-stem .svg-wrapper {{ overflow-x: auto; }}
 .q-options {{ margin: 10px 0 4px; }}
 .opt {{ display: flex; gap: 8px; align-items: flex-start; padding: 8px 10px;
@@ -204,6 +205,29 @@ body {{ font-family: "PingFang SC","Microsoft YaHei",-apple-system,sans-serif;
 .result-bar.show {{ display: flex; }}
 .result-bar .score {{ font-size: 15px; }}
 .result-bar .score b {{ color: #fbbf24; font-size: 20px; }}
+/* ========== 平板与桌面适配 ========== */
+@media (min-width: 768px) {{
+  .paper {{ max-width: 1040px; padding: 32px 28px 90px; }}
+  .paper-head {{ padding: 28px 32px; }}
+  .paper-head h1 {{ font-size: 26px; }}
+  .paper-head .meta {{ font-size: 14px; }}
+  .btn {{ padding: 9px 18px; font-size: 14px; }}
+  .sec {{ padding: 24px 28px 14px; }}
+  .sec h2 {{ font-size: 19px; }}
+  .q {{ padding: 22px 6px; }}
+  .q-num {{ width: 30px; height: 30px; font-size: 14px; }}
+  .q-stem {{ font-size: 16.5px; }}
+  .q-options {{ display: grid; grid-template-columns: 1fr 1fr; gap: 8px 18px;
+       align-items: start; }}
+  .opt {{ margin-bottom: 0; padding: 11px 14px; font-size: 15px; }}
+  .opt input {{ margin-top: 6px; width: 17px; height: 17px; }}
+  .q-answer {{ padding: 16px 20px; }}
+  .exp {{ font-size: 14.5px; }}
+}}
+@media (min-width: 1100px) {{
+  .paper {{ max-width: 1280px; }}
+  .opt-text {{ line-height: 1.65; }}
+}}
 @media print {{
   body {{ background: #fff; }}
   .paper {{ max-width: 100%; padding: 0; }}
