@@ -8,11 +8,9 @@ on:
 
 permissions:
   contents: write
-  pages: write
-  id-token: write
 
 concurrency:
-  group: pages
+  group: deploy
   cancel-in-progress: false
 
 jobs:
@@ -44,20 +42,14 @@ jobs:
             git push
           fi
 
-      - name: 准备 Pages 发布内容
+      - name: 准备 Vercel 部署内容
         run: |
-          mkdir -p _pages
-          cp index.html _pages/
-          cp -r papers _pages/
+          mkdir -p dist
+          cp index.html dist/
+          cp -r papers dist/
 
-      - name: Configure Pages
-        uses: actions/configure-pages@v5
-
-      - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: _pages
-
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+      - name: 部署到 Vercel
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          npx --yes vercel@latest deploy dist --prod --token="$VERCEL_TOKEN" --yes --name 408-quiz
