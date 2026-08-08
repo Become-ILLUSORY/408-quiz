@@ -27,7 +27,7 @@ jobs:
 
       - name: 生成今日试卷与列表页
         run: |
-          python3 make_paper.py
+          python3 make_paper.py --exclude-recent 3
           python3 gen_index.py
 
       - name: 提交试卷到仓库
