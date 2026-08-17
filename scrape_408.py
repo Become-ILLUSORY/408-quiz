@@ -33,6 +33,32 @@ def fetch(url, retries=3):
     return None
 
 
+def localize_images(html_str, year, img_dir='papers/images'):
+    """下载站内 <img src="/images/..."> 到本地并改写为相对路径（papers/ 内使用）"""
+    import os as _os
+    def repl(m):
+        path = m.group(1)  # 如 /images/2023_19_ans.jpg
+        fname = path.rsplit('/', 1)[-1]
+        _os.makedirs(img_dir, exist_ok=True)
+        local = _os.path.join(img_dir, fname)
+        if not _os.path.exists(local):
+            try:
+                r = requests.get('https://www.csgraduates.com' + path, timeout=30, headers={
+                    'User-Agent': 'Mozilla/5.0'})
+                if r.status_code == 200:
+                    with open(local, 'wb') as f:
+                        f.write(r.content)
+                    print(f'  [img] 已下载 {fname} ({len(r.content)//1024}KB)')
+                else:
+                    print(f'  [img] 下载失败 {path} -> HTTP {r.status_code}')
+                    return m.group(0)
+            except Exception as e:
+                print(f'  [img] 下载失败 {path}: {e}')
+                return m.group(0)
+        return f'src="images/{fname}"'
+    return re.sub(r'src="(/images/[^"]+)"', repl, html_str)
+
+
 def clean_ws(s):
     """压缩空白但保留 <br>/<p> 等换行结构"""
     return re.sub(r'\s+', ' ', s).strip()
@@ -68,7 +94,7 @@ def parse_question(container):
         if getattr(el, 'name', None):  # 真实标签
             stem_parts.append(str(el))
         el = el.next_sibling
-    stem_html = fix_svg(''.join(stem_parts))
+    stem_html = localize_images(fix_svg(''.join(stem_parts)))
     stem_text = extract_text_no_svg(stem_html)
 
     # 选项
@@ -95,7 +121,7 @@ def parse_question(container):
             if strong.select_one('.correct-answer-text'):
                 strong.decompose()
                 break
-        explanation = fix_svg(str(exp_clone))
+        explanation = localize_images(fix_svg(str(exp_clone)))
     else:
         explanation = ''
     exp_text = extract_text_no_svg(explanation)

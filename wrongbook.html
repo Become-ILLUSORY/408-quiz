@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>408 错题本</title>
+<style>
+:root { --accent: #2f6fed; --ok: #16a34a; --bad: #dc2626; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: "PingFang SC","Microsoft YaHei",-apple-system,sans-serif;
+       background: #f1f5f9; color: #1e293b; line-height: 1.75; }
+.paper { max-width: 860px; margin: 0 auto; padding: 24px 16px 80px; }
+.paper-head { background: #fff; border-radius: 14px; padding: 22px 24px;
+       box-shadow: 0 1px 4px rgba(15,23,42,.08); margin-bottom: 18px; }
+.paper-head h1 { font-size: 22px; }
+.paper-head .meta { color: #64748b; font-size: 13px; margin-top: 6px; }
+.controls { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
+.btn { border: 1px solid #cbd5e1; background: #f8fafc; color: #334155;
+       border-radius: 8px; padding: 7px 14px; font-size: 13px; cursor: pointer; }
+.btn:hover { border-color: var(--accent); color: var(--accent); }
+.btn-primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.sec { background: #fff; border-radius: 14px; padding: 18px 20px 10px;
+       box-shadow: 0 1px 4px rgba(15,23,42,.08); margin-bottom: 18px; }
+.sec h2 { font-size: 17px; padding-bottom: 10px; border-bottom: 2px solid #e2e8f0; margin-bottom: 8px; }
+.q { padding: 16px 4px; border-bottom: 1px dashed #e2e8f0; }
+.q:last-child { border-bottom: none; }
+.q-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+.q-num { background: var(--accent); color: #fff; font-size: 13px; font-weight: 700;
+       width: 26px; height: 26px; border-radius: 50%; display: inline-flex;
+       align-items: center; justify-content: center; flex: none; }
+.q-src { font-size: 12px; color: #94a3b8; }
+.q-stem { font-size: 15px; }
+.q-stem p { margin: 4px 0; }
+.q-stem code { background: #f1f5f9; padding: 1px 5px; border-radius: 4px;
+       font-family: Consolas,monospace; font-size: .92em; }
+.svg-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; margin: 8px 0; }
+.svg-scroll svg { max-width: 100%; max-height: 540px; height: auto; display: block; margin: 0 auto; }
+.svg-scroll img { max-width: 100%; height: auto; display: block; margin: 8px auto; }
+.q-options { margin: 10px 0 4px; }
+.opt { display: flex; gap: 8px; align-items: flex-start; padding: 8px 10px;
+       border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 6px;
+       cursor: pointer; transition: all .12s; font-size: 14px; }
+.opt:hover { border-color: var(--accent); background: #f8fafc; }
+.opt input { margin-top: 5px; accent-color: var(--accent); flex: none; }
+.opt.selected { border-color: var(--accent); background: #eff6ff; }
+.opt.correct { border-color: var(--ok); background: #f0fdf4; }
+.opt.wrong { border-color: var(--bad); background: #fef2f2; }
+.opt-text svg { max-width: 100%; height: auto; display: block; }
+.q-answer { margin-top: 12px; border: 1px solid #bfdbfe; background: #eff6ff;
+       border-radius: 10px; padding: 12px 14px; }
+.ans-line { font-size: 14px; margin-bottom: 6px; }
+.ans-line b { color: var(--ok); font-size: 16px; margin: 0 4px; }
+.exp { font-size: 13.5px; color: #334155; border-top: 1px dashed #bfdbfe;
+       padding-top: 8px; margin-top: 6px; }
+.exp p { margin: 4px 0; }
+.exp img { max-width: 100%; height: auto; border-radius: 6px; }
+.result-bar { position: sticky; bottom: 0; background: #0f172a; color: #fff;
+       border-radius: 12px; padding: 12px 18px; display: none; margin-top: 14px;
+       box-shadow: 0 -4px 16px rgba(15,23,42,.25); }
+.result-bar.show { display: block; }
+.result-bar .score b { color: #fbbf24; font-size: 20px; }
+.empty { text-align: center; color: #64748b; padding: 60px 0; }
+.empty .big { font-size: 48px; }
+a.back { color: var(--accent); text-decoration: none; font-size: 14px; }
+</style>
+</head>
+<body>
+<div class="paper">
+  <div class="paper-head">
+    <h1>📕 408 错题本</h1>
+    <div class="meta">存放你在每份卷子里答错/未答的题，<b>答对后自动移出</b>。数据保存在本机浏览器。 <a class="back" href="index.html">← 返回卷子列表</a></div>
+    <div class="controls">
+      <button class="btn btn-primary" onclick="submitPaper()">交卷并查看答案</button>
+      <button class="btn" onclick="clearPaper()">清空重做</button>
+      <button class="btn" onclick="clearBook()">清空错题本</button>
+    </div>
+  </div>
+  <div id="content"><div class="empty"><div class="big">⏳</div>加载中…</div></div>
+  <div class="result-bar" id="resultBar"></div>
+</div>
+<script>
+var DB = null, QS = null;
+function dec(a){ return atob(a||''); }
+function esc(s){ var d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+
+function load(cb){
+  fetch('questions.json').then(function(r){ return r.json(); }).then(function(db){
+    DB = {};
+    db.forEach(function(q){ DB[q.year+'-'+q.num] = q; });
+    cb();
+  }).catch(function(){
+    document.getElementById('content').innerHTML =
+      '<div class="empty">questions.json 加载失败，请从 GitHub Pages 首页进入。</div>';
+  });
+}
+
+function render(){
+  var wb;
+  try { wb = JSON.parse(localStorage.getItem('wb_wrong')||'[]'); } catch(e){ wb=[]; }
+  if (!wb.length){
+    document.getElementById('content').innerHTML =
+      '<div class="empty"><div class="big">🎉</div>错题本是空的，继续保持！</div>';
+    return;
+  }
+  var bySubj = {};
+  wb.forEach(function(id){ var q = DB[id]; if(!q) return;
+    (bySubj[q.subject] = bySubj[q.subject]||[]).push(q); });
+  var html='', n=0;
+  ['数据结构','组成原理','操作系统','计算机网络'].forEach(function(s){
+    if(!bySubj[s]) return;
+    var blocks='';
+    bySubj[s].forEach(function(q){
+      n++;
+      var stem = (q.stem_html||esc(q.stem_text)).replace('src="images/','src="papers/images/');
+      var opts='';
+      if(q.options_in_svg){
+        'ABCD'.split('').forEach(function(L){
+          opts+='<label class="opt"><input type="radio" name="q'+n+'" value="'+L+'" data-qid="'+q.year+'-'+q.num+'">'+
+                '<span class="opt-letter">'+L+'.</span><span class="opt-text">见图中 '+L+'</span></label>';
+        });
+      } else {
+        q.options.forEach(function(o,i){
+          var L=o.label||'ABCD'[i];
+          opts+='<label class="opt"><input type="radio" name="q'+n+'" value="'+L+'" data-qid="'+q.year+'-'+q.num+'">'+
+                '<span class="opt-letter">'+L+'.</span><span class="opt-text">'+(o.html||esc(o.text))+'</span></label>';
+        });
+      }
+      var ans = btoa(q.answer);
+      var exp = (q.explanation_html||esc(q.explanation_text)).replace('src="images/','src="papers/images/');
+      blocks+='<div class="q" id="q'+n+'" data-qid="'+q.year+'-'+q.num+'">'+
+        '<div class="q-head"><span class="q-num">'+n+'</span><span class="q-src">'+q.year+'·'+q.subject+'·第'+q.num+'题</span></div>'+
+        '<div class="q-stem">'+stem+'</div><div class="q-options">'+opts+'</div>'+
+        '<div class="q-answer" hidden data-answer="'+ans+'"><div class="ans-line">正确答案：<b>'+esc(q.answer)+'</b></div>'+
+        '<div class="exp">'+exp+'</div></div></div>';
+    });
+    html+='<section class="sec"><h2>'+s+'<span style="font-size:12px;color:#64748b;font-weight:normal;margin-left:10px">'+bySubj[s].length+'题</span></h2>'+blocks+'</section>';
+  });
+  document.getElementById('content').innerHTML = html || '<div class="empty">🎉 错题本是空的！</div>';
+}
+
+function submitPaper(){
+  var right=0,total=0;
+  document.querySelectorAll('.q').forEach(function(q){
+    var ans=q.querySelector('.q-answer'); if(!ans) return;
+    total+=2; ans.hidden=false;
+    var correct=dec(ans.dataset.answer);
+    var chosen=q.querySelector('input:checked');
+    q.querySelectorAll('label.opt').forEach(function(l){
+      var inp=l.querySelector('input');
+      if(inp.value===correct) l.classList.add('correct');
+      else if(inp.checked) l.classList.add('wrong');
+    });
+    if(chosen && chosen.value===correct) right+=2;
+    // 答对移出错题本
+    var qid=q.dataset.qid;
+    try{
+      var wb=JSON.parse(localStorage.getItem('wb_wrong')||'[]');
+      if(chosen && chosen.value===correct){ var i=wb.indexOf(qid); if(i>=0){wb.splice(i,1);
+        var tag=q.querySelector('.q-src'); if(tag) tag.textContent+=' ✓ 已移出错题本';} }
+      localStorage.setItem('wb_wrong', JSON.stringify(wb));
+    }catch(e){}
+  });
+  var bar=document.getElementById('resultBar');
+  bar.innerHTML='<span class="score">得分：<b>'+right+'</b> / '+total+' 分（答对即移出错题本）</span>';
+  bar.classList.add('show');
+}
+function clearPaper(){
+  document.querySelectorAll('input[type=radio]').forEach(function(i){i.checked=false;});
+  document.querySelectorAll('label.opt').forEach(function(l){l.classList.remove('selected','correct','wrong');});
+  document.querySelectorAll('.q-answer').forEach(function(a){a.hidden=true;});
+  document.getElementById('resultBar').classList.remove('show');
+}
+function clearBook(){
+  if(!confirm('确定清空全部错题？')) return;
+  localStorage.removeItem('wb_wrong');
+  render();
+}
+document.addEventListener('click', function(e){
+  var l = e.target.closest('label.opt'); if(!l) return;
+  var name=l.querySelector('input').name;
+  document.querySelectorAll('label.opt').forEach(function(o){
+    if(o.querySelector('input').name===name) o.classList.remove('selected');
+  });
+  l.classList.add('selected');
+});
+load(render);
+</script>
+</body>
+</html>
