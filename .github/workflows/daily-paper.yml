@@ -36,7 +36,7 @@ jobs:
       - name: 试卷自检
         run: |
           paper="papers/408卷_$(date +%F).html"
-          python3 check_paper.py questions.json "$paper" wrongbook.html
+          python3 check_paper.py questions.json "$paper"
 
       - name: 清理旧试卷（只保留最近 60 份，控制仓库体积）
         run: |
