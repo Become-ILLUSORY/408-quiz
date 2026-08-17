@@ -59,7 +59,7 @@ jobs:
       - name: 准备 Vercel 部署内容
         run: |
           mkdir -p dist
-          cp index.html wrongbook.html dist/
+          cp index.html wrongbook.html questions.json dist/
           cp -r papers dist/
 
       - name: 部署到 Vercel
