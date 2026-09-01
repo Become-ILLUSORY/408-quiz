@@ -88,9 +88,33 @@ def pick_questions(db, counts, years, seed, recent_ids=None):
 
 
 def wrap_svgs(fragment):
-    """把 SVG 包进可横向滚动容器，并标记可点击放大"""
-    return (fragment.replace("<svg", '<div class="svg-scroll"><svg data-zoom="1"')
-                    .replace("</svg>", "</svg></div>"))
+    """把最外层 SVG 包进可横向滚动容器，并标记可点击放大。
+    只包装顶层 <svg>（不在其它 <svg> 内部的），嵌套的 <svg>/<image> 保持原样，
+    否则 <div> 被插进 <svg> 内部会导致浏览器提前关闭外层 SVG，整张图渲染失败。"""
+    out = []
+    depth = 0          # 当前 SVG 嵌套深度
+    i = 0
+    n = len(fragment)
+    while i < n:
+        if fragment.startswith("</svg>", i):
+            depth -= 1
+            out.append("</svg>")
+            if depth == 0:
+                out.append("</div>")   # 关闭顶层 SVG 的滚动容器
+            i += 6
+        elif fragment.startswith("<svg", i):
+            # 匹配到 <svg 标签开始（含属性）
+            is_top = (depth == 0)
+            if is_top:
+                out.append('<div class="svg-scroll"><svg data-zoom="1"')
+            else:
+                out.append("<svg")
+            depth += 1
+            i += 4
+        else:
+            out.append(fragment[i])
+            i += 1
+    return "".join(out)
 
 
 def render_q(q, qnum, show_answer):
