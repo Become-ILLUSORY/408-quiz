@@ -149,6 +149,7 @@ def render_q(q, qnum, show_answer):
         opts_html = '<div class="q-options">' + "".join(opts) + "</div>"
 
     ans_html = ""
+    check_btn = ""
     if show_answer and q["answer"]:
         # 答案 base64 存放，避免 F12 一眼可见
         ans_enc = base64.b64encode(q["answer"].encode()).decode()
@@ -159,13 +160,19 @@ def render_q(q, qnum, show_answer):
             f'<span class="ans-src">（来源：{src}）</span></div>'
             f'<div class="exp">{exp}</div></div>'
         )
+        # 背题模式：每题一个"查看本题答案"按钮（默认隐藏，开背题模式才显示）
+        check_btn = (
+            f'<div class="q-check"><button type="button" class="btn btn-check" '
+            f'data-qid="{qid}" onclick="toggleQAnswer(this)" hidden>'
+            f'查看本题答案</button></div>'
+        )
 
     return (
         f'<div class="q" id="q{qnum}" data-qid="{qid}">'
         f'<div class="q-head"><span class="q-num">{qnum}</span>'
         f'<span class="q-src">{src}</span>{tag}</div>'
         f'<div class="q-stem">{stem}</div>'
-        f'{opts_html}{ans_html}</div>'
+        f'{opts_html}{ans_html}{check_btn}</div>'
     )
 
 
@@ -227,6 +234,7 @@ body { font-family: "PingFang SC","Microsoft YaHei",-apple-system,sans-serif;
        border-radius: 8px; padding: 7px 14px; font-size: 13px; cursor: pointer; }
 .btn:hover { border-color: var(--accent); color: var(--accent); }
 .btn-primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
 .timer { font-variant-numeric: tabular-nums; font-size: 14px; color: #475569;
        background: #f1f5f9; border-radius: 8px; padding: 6px 12px; margin-left: auto; }
 .timer b { color: #0f172a; }
@@ -266,6 +274,11 @@ body { font-family: "PingFang SC","Microsoft YaHei",-apple-system,sans-serif;
 .opt.wrong { border-color: var(--bad); background: #fef2f2; }
 .opt-text svg { max-width: 100%; height: auto; display: block; }
 .opts-in-svg-hint { color: #64748b; font-size: 13px; padding: 4px 0; }
+.q-check { margin-top: 10px; }
+.q-check .btn-check { border-color: var(--accent); color: var(--accent);
+       background: #eff6ff; padding: 6px 16px; font-size: 13px; }
+.q-check .btn-check:hover { background: var(--accent); color: #fff; }
+.q-check .btn-check.open { background: var(--accent); color: #fff; }
 .q-answer { margin-top: 12px; border: 1px solid #bfdbfe; background: #eff6ff;
        border-radius: 10px; padding: 12px 14px; }
 .ans-line { font-size: 14px; margin-bottom: 6px; }
@@ -338,6 +351,7 @@ body { font-family: "PingFang SC","Microsoft YaHei",-apple-system,sans-serif;
     <div class="controls">
       <button class="btn btn-primary" onclick="submitPaper()">交卷并查看答案</button>
       <button class="btn" onclick="showAllAnswers()">直接看全部答案</button>
+      <button class="btn" id="memModeBtn" onclick="toggleMemMode()">📖 背题模式</button>
       <button class="btn" onclick="clearPaper()">清空重做</button>
       <span class="timer" id="timer">用时 <b>00:00</b></span>
     </div>
@@ -453,6 +467,59 @@ function showAllAnswers() {
   document.querySelectorAll('.q').forEach(function(q) { markQuestion(q, false); });
   document.getElementById('resultBar').classList.remove('show');
 }
+
+// ---------- 背题模式：逐题查看答案 ----------
+var MEM_KEY = 'memMode_' + (location.pathname.split('/').pop() || 'global');
+function setMemMode(on) {
+  var btn = document.getElementById('memModeBtn');
+  if (btn) {
+    btn.classList.toggle('active', on);
+    btn.textContent = on ? '📖 背题模式（开）' : '📖 背题模式';
+  }
+  document.querySelectorAll('.btn-check').forEach(function(b) {
+    b.hidden = !on;
+    // 切回交卷模式时，收起已展开的答案、去掉对错标记（保留作答）
+    if (!on) {
+      var q = b.closest('.q');
+      var ans = q.querySelector('.q-answer');
+      if (ans && !ans.hidden) ans.hidden = true;
+      q.querySelectorAll('label.opt').forEach(function(l) {
+        l.classList.remove('correct','wrong');
+      });
+      b.classList.remove('open');
+      b.textContent = '查看本题答案';
+    }
+  });
+  try { localStorage.setItem(MEM_KEY, on ? '1' : '0'); } catch(e) {}
+}
+function toggleMemMode() {
+  var on = !document.getElementById('memModeBtn').classList.contains('active');
+  setMemMode(on);
+}
+function toggleQAnswer(btn) {
+  var q = btn.closest('.q');
+  var ans = q.querySelector('.q-answer');
+  if (!ans) return;
+  var isOpen = !ans.hidden;
+  if (isOpen) {
+    // 收起
+    ans.hidden = true;
+    q.querySelectorAll('label.opt').forEach(function(l) {
+      l.classList.remove('correct','wrong');
+    });
+    btn.classList.remove('open');
+    btn.textContent = '查看本题答案';
+  } else {
+    // 展开：标记对错 + 显示答案解析
+    markQuestion(q, true);
+    btn.classList.add('open');
+    btn.textContent = '收起答案';
+  }
+}
+// 初始化背题模式开关状态
+try {
+  if (localStorage.getItem(MEM_KEY) === '1') setMemMode(true);
+} catch(e) {}
 function clearPaper() {
   document.querySelectorAll('input[type=radio]').forEach(function(i) { i.checked = false; });
   document.querySelectorAll('label.opt').forEach(function(l) {
